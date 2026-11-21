@@ -35,7 +35,7 @@ prenda, talla, datos y total) pero no sale nada.
 
 Cada prueba guarda **una captura y un video**, y si falla, también la traza paso a paso.
 
-## Errores reales que encontraron las pruebas
+## Errores que encontraron al hacer las pruebas
 
 | Hallazgo | Por qué importa | Prueba |
 | --- | --- | --- |
