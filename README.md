@@ -11,7 +11,7 @@ iniciar sesión. Eso es lo que hace este repositorio, con Playwright, como lo ha
 
 | Etapa | Qué cubre | Estado |
 | --- | --- | --- |
-| 1 | VisagShop en el navegador: catálogo, carrito, pedido, cuentas y panel | ✅ 26 pruebas (2 encontraron errores reales) |
+| 1 | VisagShop en el navegador: catálogo, carrito, pedido, cuentas y panel | ✅ 27 pruebas; encontraron 2 errores reales, ya corregidos |
 | 2 | UniGest (tres roles) y VisagStock (invitado) | Próximamente |
 | 3 | APIs con Postman / Newman | Próximamente |
 | 4 | GitHub Actions, prueba diaria en línea y reportes | Próximamente |
@@ -37,13 +37,18 @@ Cada prueba guarda **una captura y un video**, y si falla, también la traza pas
 
 ## Errores que encontraron al hacer las pruebas
 
-| Hallazgo | Por qué importa | Prueba |
-| --- | --- | --- |
-| El detalle de cada producto dice **"VISAGSHOP / STREETWEAR COLLECTION"**. | En el Sprint 7 se decidió usar "ropa urbana" en vez de "streetwear"; este letrero se escapó. | `los letreros del detalle están en español` |
-| Al iniciar sesión, la tienda responde **"No hay una cuenta registrada con este correo"** o **"La contraseña no es correcta"** según el caso. | Con esos dos mensajes alguien puede averiguar qué correos tienen cuenta (enumeración de usuarios). Lo seguro es un mismo mensaje en los dos casos. | `no revela si un correo está registrado` |
+| Hallazgo | Por qué importa | Prueba | Corrección en VisagShop |
+| --- | --- | --- | --- |
+| El detalle de cada producto dice **"VISAGSHOP / STREETWEAR COLLECTION"**. | En el Sprint 7 se decidió usar "ropa urbana" en vez de "streetwear"; este letrero se escapó. | `los letreros del detalle están en español` | Ahora dice «VISAGSHOP / COLECCIÓN URBANA». |
+| Al iniciar sesión, la tienda responde **"No hay una cuenta registrada con este correo"** o **"La contraseña no es correcta"** según el caso. | Con esos dos mensajes alguien puede averiguar qué correos tienen cuenta (enumeración de usuarios). Lo seguro es un mismo mensaje en los dos casos. | `no revela si un correo está registrado` | Los dos casos responden «El correo o la contraseña no son correctos.» y tardan lo mismo. |
 
-Estas dos pruebas fallan a propósito hasta que se corrija VisagShop: una prueba de QA que falla por un
-error real está haciendo su trabajo.
+Primero las dejé fallando a propósito (una prueba de QA que falla por un error real está haciendo su
+trabajo), después corregí VisagShop y ahora pasan. Si alguno de los dos errores vuelve a aparecer, la
+prueba lo va a detectar.
+
+Al corregir el segundo encontré otro detalle: cuando el correo no existía, la tienda respondía más rápido
+porque se saltaba la comprobación de la contraseña, y midiendo el tiempo también se podía adivinar. Ahora
+compara la contraseña contra una clave ficticia para que los dos casos tarden lo mismo.
 
 ## Cómo correrlo
 
@@ -105,6 +110,8 @@ pruebas crean sus propios clientes con correos `@example.test`.
 5. **Las pruebas también encuentran errores de texto y de seguridad**, no solo de lógica: los dos hallazgos
    de esta etapa no rompían nada, pero uno contradice una decisión del proyecto y el otro filtra
    información.
+6. **El ciclo completo de QA:** la prueba encuentra el error, se corrige en el proyecto y la misma prueba
+   pasa a cuidar que no vuelva.
 
 ## Problemas que tuve y cómo los resolví
 
@@ -115,4 +122,5 @@ pruebas crean sus propios clientes con correos `@example.test`.
 | Al confirmar el pedido se abría una pestaña de WhatsApp. | El botón abre `wa.me` con el resumen del pedido. | Un *fixture* bloquea `wa.me` en todas las pruebas y guarda el mensaje para revisarlo. |
 | Después de explorar, las pruebas empezaron a fallar con "Demasiados intentos". | Mis exploraciones gastaron el límite de 10 pedidos por hora de la tienda de prueba. | Reiniciar la tienda (el límite vive en memoria) y gastar menos pedidos por ejecución. |
 | La prueba de enumeración de correos pasaba sin deber. | Leía el aviso antes de que la respuesta del servidor lo llenara. | Esperar con `expect(...).not.toBeEmpty()` antes de leerlo. |
+| El resumen decía 26 pruebas, pero eran 27. | Las pruebas de cuentas corren en cadena (modo *serial*): cuando una falla, Playwright salta las siguientes. La que venía después de la que encontró el error no se ejecutaba. | Al corregir el error se ejecutaron todas. Aprendí a revisar también las pruebas que no corrieron, no solo las que fallan. |
 | TypeScript pedía la extensión `.js` en cada `import`. | Con `moduleResolution: nodenext` los `import` relativos deben llevarla. | Usar `moduleResolution: bundler`, que es como Playwright carga los archivos. |
