@@ -1,0 +1,21 @@
+{
+  "name": "visagqa",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pruebas automáticas de punta a punta para VisagShop, VisagStock, UniGest y VisagAssist",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "playwright test",
+    "test:tienda": "playwright test --project=tienda",
+    "reporte": "playwright show-report reportes/html",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "@types/node": "^24.0.0",
+    "typescript": "7.0.2"
+  }
+}

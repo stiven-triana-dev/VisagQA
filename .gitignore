@@ -1,0 +1,5 @@
+node_modules/
+reportes/
+tienda-app/
+.env
+*.log
