@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { TIENDA } from './pruebas/apoyo/entorno';
+import { INVENTARIO, SESION_INVENTARIO, TIENDA } from './pruebas/apoyo/entorno';
 
 const carpetaTienda = process.env.TIENDA_DIR;
 
@@ -25,6 +25,25 @@ export default defineConfig({
       name: 'tienda',
       testDir: './pruebas/tienda',
       use: { ...devices['Desktop Chrome'], baseURL: TIENDA.url },
+    },
+    {
+      name: 'inventario-sesion',
+      testDir: './pruebas/inventario',
+      testMatch: /sesion\.setup\.ts/,
+      use: { ...devices['Desktop Chrome'], baseURL: INVENTARIO.url },
+    },
+    {
+      name: 'inventario',
+      testDir: './pruebas/inventario',
+      dependencies: ['inventario-sesion'],
+      use: { ...devices['Desktop Chrome'], baseURL: INVENTARIO.url, storageState: SESION_INVENTARIO },
+    },
+    {
+      name: 'en-linea',
+      testDir: './pruebas/en-linea',
+      timeout: 240_000,
+      expect: { timeout: 20_000 },
+      use: { ...devices['Desktop Chrome'], navigationTimeout: 180_000 },
     },
   ],
   webServer: carpetaTienda

@@ -7,6 +7,23 @@ export const TIENDA = {
   whatsapp: '573000000000',
 };
 
+export const INVENTARIO = {
+  url: process.env.STOCK_URL ?? 'http://localhost:3220',
+  admin: {
+    usuario: process.env.STOCK_ADMIN_USUARIO ?? 'admin_qa',
+    clave: process.env.STOCK_ADMIN_CLAVE ?? 'clave-stock-qa-2026',
+  },
+};
+
+export const SESION_INVENTARIO = 'reportes/.sesiones/inventario-admin.json';
+
+export const EN_LINEA = {
+  tienda: 'https://visagshop.onrender.com',
+  inventario: 'https://visagstock.onrender.com',
+  unigest: process.env.UNIGEST_URL ?? 'https://unigest-d9zx.onrender.com',
+  claveDemoUnigest: 'Demo-UniGest-2026',
+};
+
 export const JEAN = {
   id: 'p042',
   nombre: 'Jean baggy · Negro',

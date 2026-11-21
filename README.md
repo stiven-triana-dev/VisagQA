@@ -1,26 +1,35 @@
 # VisagQA
 
-Pruebas automáticas **de punta a punta** para mis proyectos: **VisagShop** (la tienda), y en las
-siguientes etapas **VisagStock**, **UniGest** y **VisagAssist**.
+Pruebas automáticas **de punta a punta** para mis proyectos: **VisagShop** (la tienda), **VisagStock**
+(su inventario), **UniGest** (sistema académico) y, en la siguiente etapa, las APIs de **VisagAssist**.
 
 Cada proyecto ya tiene pruebas por dentro (unitarias y de integración). Lo que faltaba era probarlos
 **desde afuera, como los usa una persona**: abrir la página, buscar, elegir talla, llenar el formulario,
-iniciar sesión. Eso es lo que hace este repositorio, con Playwright, como lo haría un analista QA.
+iniciar sesión con cada rol. Eso es lo que hace este repositorio, con Playwright, como lo haría un
+analista QA.
+
+![Reporte de Playwright con las 45 pruebas pasando](docs/reporte.png)
 
 ## Estado
 
 | Etapa | Qué cubre | Estado |
 | --- | --- | --- |
-| 1 | VisagShop en el navegador: catálogo, carrito, pedido, cuentas y panel | ✅ 27 pruebas; encontraron 2 errores reales, ya corregidos |
-| 2 | UniGest (tres roles) y VisagStock (invitado) | Próximamente |
+| 1 | VisagShop: catálogo, carrito, pedido, cuentas y panel | ✅ 27 pruebas |
+| 2 | VisagStock (administrador e invitado) y UniGest (tres roles) | ✅ 18 pruebas |
 | 3 | APIs con Postman / Newman | Próximamente |
 | 4 | GitHub Actions, prueba diaria en línea y reportes | Próximamente |
 
-## Qué se prueba en VisagShop
+**45 pruebas en total. Encontraron 5 errores reales, y ya están corregidos en cada proyecto.**
 
-Las pruebas corren contra **una copia de la tienda con una base de datos de prueba**, nunca contra la
-tienda publicada: así se pueden hacer pedidos completos sin llenar la tienda real de pedidos falsos, y
-cada ejecución empieza siempre desde los mismos datos.
+## Tres grupos de pruebas
+
+| Grupo | Contra qué corre | Regla |
+| --- | --- | --- |
+| `tienda` | Una **copia de VisagShop** con una base PostgreSQL de prueba | Aquí sí se escriben datos: pedidos, cuentas, cambios de estado. |
+| `inventario` | Una **copia de VisagStock sobre la misma base** de la tienda de prueba | Igual que en producción: VisagStock lee los productos y tallas que creó VisagShop. Es una prueba de integración entre las dos aplicaciones. |
+| `en-linea` | Las aplicaciones **publicadas** (UniGest y VisagStock) | **Solo lectura.** Las ven reclutadores, así que no se crea ni se cambia nada: UniGest solo se consulta y en VisagStock se usa la cuenta de invitado, que nunca guarda. |
+
+### `tienda` — VisagShop
 
 | Archivo | Pruebas |
 | --- | --- |
@@ -33,84 +42,97 @@ cada ejecución empieza siempre desde los mismos datos.
 WhatsApp **siempre queda bloqueado**: la prueba lee el mensaje que se iba a enviar (número de pedido,
 prenda, talla, datos y total) pero no sale nada.
 
+### `inventario` — VisagStock como administrador
+
+Contraseña incorrecta; los 108 productos y las tallas que vienen de VisagShop; un **ingreso real** sube
+el stock y queda en el kárdex; no deja despachar más de lo que hay; una **devolución dañada** queda
+registrada sin volver a la venta; el aviso de **stock bajo** aparece en el resumen; en el celular el
+kárdex se ve como tarjetas. Cada prueba lee primero el stock actual, así funcionan aunque la base ya
+tenga movimientos de ejecuciones anteriores.
+
+### `en-linea` — UniGest y VisagStock publicados
+
+- **UniGest:** sin sesión la API no entrega datos; con una contraseña incorrecta no entra y lo explica;
+  el **administrador** ve el resumen y el directorio; el **docente** y el **estudiante** entran a su
+  portal y reciben **403** si piden datos de administración, y si intentan abrir el panel vuelven a su
+  portal; la pantalla de entrada no muestra textos del modo de desarrollo; el logo se ve.
+- **VisagStock como invitado:** entra sin contraseña, ve los productos, un ingreso de prueba muestra el
+  resultado pero el stock **no cambia**, y tampoco deja simular un despacho mayor al stock.
+
 Cada prueba guarda **una captura y un video**, y si falla, también la traza paso a paso.
 
 ## Errores que encontraron al hacer las pruebas
 
-| Hallazgo | Por qué importa | Prueba | Corrección en VisagShop |
+| Proyecto | Hallazgo | Por qué importa | Corrección |
 | --- | --- | --- | --- |
-| El detalle de cada producto dice **"VISAGSHOP / STREETWEAR COLLECTION"**. | En el Sprint 7 se decidió usar "ropa urbana" en vez de "streetwear"; este letrero se escapó. | `los letreros del detalle están en español` | Ahora dice «VISAGSHOP / COLECCIÓN URBANA». |
-| Al iniciar sesión, la tienda responde **"No hay una cuenta registrada con este correo"** o **"La contraseña no es correcta"** según el caso. | Con esos dos mensajes alguien puede averiguar qué correos tienen cuenta (enumeración de usuarios). Lo seguro es un mismo mensaje en los dos casos. | `no revela si un correo está registrado` | Los dos casos responden «El correo o la contraseña no son correctos.» y tardan lo mismo. |
+| VisagShop | El detalle de cada producto decía **"VISAGSHOP / STREETWEAR COLLECTION"**. | En el Sprint 7 se decidió usar "ropa urbana" en vez de "streetwear"; este letrero se escapó. | Ahora dice «VISAGSHOP / COLECCIÓN URBANA». |
+| VisagShop | Al iniciar sesión respondía **"No hay una cuenta registrada con este correo"** o **"La contraseña no es correcta"** según el caso. | Con esos dos mensajes alguien puede averiguar qué correos tienen cuenta (enumeración de usuarios). | Los dos casos responden «El correo o la contraseña no son correctos.» y **tardan lo mismo**. |
+| UniGest | El **logo no se veía**. | Un script que usé para quitar comentarios abrió el PNG como texto y lo guardó dañado: sus primeros bytes pasaron de `89 50 4E 47` a `EF BF BD`. | Lo recuperé del historial de git y revisé los 357 archivos binarios de mis 6 proyectos: era el único dañado. |
+| UniGest | La demo pública mostraba **"Entorno local de desarrollo"** y **"Datos del servidor local"**. | Eran los textos iniciales de la página y solo cambiaban cuando confirmaba el modo demo. | Ahora arranca con textos neutros y solo dice "Entorno local" cuando de verdad lo es. |
+| UniGest | Con una contraseña incorrecta decía **"La sesión no es válida o ha expirado."** | La persona no tenía sesión: solo escribió mal la clave. Todos los errores 401 compartían ese mensaje. | En el inicio de sesión ahora dice «El correo o la contraseña no son correctos.». |
 
-Primero las dejé fallando a propósito (una prueba de QA que falla por un error real está haciendo su
-trabajo), después corregí VisagShop y ahora pasan. Si alguno de los dos errores vuelve a aparecer, la
-prueba lo va a detectar.
-
-Al corregir el segundo encontré otro detalle: cuando el correo no existía, la tienda respondía más rápido
-porque se saltaba la comprobación de la contraseña, y midiendo el tiempo también se podía adivinar. Ahora
-compara la contraseña contra una clave ficticia para que los dos casos tarden lo mismo.
+Primero dejé cada prueba **fallando a propósito** (una prueba de QA que falla por un error real está
+haciendo su trabajo), después corregí el proyecto y ahora pasan. Si un error vuelve, la prueba lo detecta.
 
 ## Cómo correrlo
 
-Necesitas **Node.js 22.12 o superior**, PostgreSQL y una copia de
-[VisagShop](https://github.com/stiven-triana-dev/VisagShop).
+Necesitas **Node.js 22.12 o superior** y, para los grupos `tienda` e `inventario`, PostgreSQL con copias
+de [VisagShop](https://github.com/stiven-triana-dev/VisagShop) y
+[VisagStock](https://github.com/stiven-triana-dev/VisagStock).
 
 ```bash
 npm install
 npx playwright install chromium
 ```
 
-Opción A, que Playwright arranque la tienda solo:
+| Grupo | Qué debe estar corriendo |
+| --- | --- |
+| `tienda` | VisagShop en `http://localhost:3210` con `ADMIN_USERNAME=admin_qa`, `ADMIN_PASSWORD=clave-admin-qa-2026` y `WHATSAPP_NUMBER=573000000000`. También puede arrancarla Playwright: `TIENDA_DIR=../VisagShop TIENDA_DATABASE_URL=postgres://… npm run test:tienda`. |
+| `inventario` | VisagStock en `http://localhost:3220`, sobre la **misma base** de la tienda, con `ADMIN_USERNAME=admin_qa` y `ADMIN_PASSWORD=clave-stock-qa-2026`. |
+| `en-linea` | Nada: usa las aplicaciones publicadas. La primera prueba puede tardar hasta 2 minutos mientras Render las despierta. `UNIGEST_URL` permite apuntar a otra copia de UniGest. |
 
 ```bash
-TIENDA_DIR=../VisagShop TIENDA_DATABASE_URL=postgres://usuario:clave@localhost:5432/visagqa npm run test:tienda
-```
-
-Opción B, si la tienda ya está corriendo en `http://localhost:3210` con `ADMIN_USERNAME=admin_qa`,
-`ADMIN_PASSWORD=clave-admin-qa-2026` y `WHATSAPP_NUMBER=573000000000`:
-
-```bash
+npm test                  # los tres grupos
 npm run test:tienda
+npm run test:inventario
+npm run test:en-linea
+npm run reporte           # abre el reporte con capturas y videos
+npm run typecheck         # revisa los tipos de TypeScript
 ```
-
-Otros comandos:
-
-```bash
-npm run reporte    # abre el reporte con capturas y videos
-npm run typecheck  # revisa los tipos de TypeScript
-```
-
-Si la base de datos está vacía, la tienda crea las tablas y carga sus 108 productos al arrancar. Las
-pruebas crean sus propios clientes con correos `@example.test`.
 
 ## Qué usé y por qué
 
 | Herramienta | Para qué | Por qué la elegí |
 | --- | --- | --- |
-| **Playwright** | Abrir un navegador real y usar la tienda como una persona | Espera sola a que aparezcan los elementos, graba video y captura, y deja una traza para ver qué pasó cuando algo falla. |
+| **Playwright** | Abrir un navegador real y usar las aplicaciones como una persona | Espera sola a que aparezcan los elementos, graba video y captura, y deja una traza para ver qué pasó cuando algo falla. |
 | **TypeScript** | Escribir las pruebas | Avisa errores antes de correr: un nombre mal escrito en una función de apoyo no llega a ejecutarse. |
-| **Selectores por rol y nombre** (`getByRole`) | Encontrar botones y campos | Buscan los elementos como los anuncia un lector de pantalla ("botón AÑADIR AL CARRITO"), no por clases de CSS que cambian con el diseño. Si la página no es accesible, la prueba lo nota. |
-| **Fixture propio de WhatsApp** | Bloquear los enlaces a `wa.me` en todas las pruebas | Ninguna prueba puede enviar un mensaje real por accidente, y todas pueden leer lo que se iba a enviar. |
-| **PostgreSQL de prueba** | La base de la copia de la tienda | Es el mismo motor que usa la tienda en producción (Neon); un archivo JSON no se comportaría igual. |
+| **Selectores por rol y nombre** (`getByRole`) | Encontrar botones y campos | Buscan los elementos como los anuncia un lector de pantalla ("botón AÑADIR AL CARRITO"), no por clases de CSS que cambian con el diseño. |
+| **Proyectos de Playwright** | Separar `tienda`, `inventario` y `en-linea` | Cada grupo tiene su dirección, sus tiempos de espera (en línea hasta 4 minutos por prueba) y sus reglas. |
+| **Sesión guardada** (`storageState`) | Iniciar sesión una vez en el inventario y reutilizarla | VisagStock permite 10 inicios de sesión cada 15 minutos; sin esto, las pruebas chocaban con ese límite. |
+| **Fixture propio de WhatsApp** | Bloquear `wa.me` en todas las pruebas de la tienda | Ninguna prueba puede enviar un mensaje real por accidente, y todas pueden leer lo que se iba a enviar. |
+| **PostgreSQL de prueba** | Las bases de las copias | Es el mismo motor que usan las aplicaciones en producción (Neon). |
 
 ## Lo que aprendí
 
-1. **Primero entender, después probar.** Antes de escribir una sola prueba recorrí la tienda a mano con
+1. **Primero entender, después probar.** Antes de escribir una sola prueba recorrí cada aplicación con
    Playwright y miré qué envía al servidor. Así descubrí que el precio no viaja desde el navegador (solo el
    producto, la talla y la cantidad), y que la forma correcta de probar la seguridad era mandarle al
    servidor un pedido con un precio falso.
-2. **No probar en producción lo que escribe datos.** Un pedido de prueba en la tienda real se ve como un
-   pedido real. Por eso las pruebas completas van contra una copia, y lo que va en línea solo lee.
+2. **No escribir datos en lo que está publicado.** Un pedido de prueba en la tienda real se ve como un
+   pedido real, y la demo de UniGest la ven reclutadores. Por eso lo que escribe va contra copias, y lo que
+   va en línea solo lee o usa una cuenta que no guarda.
 3. **Una prueba que pasa por error es peor que una que falla.** Mi prueba de "no revelar correos" pasó la
-   primera vez: leía el mensaje antes de que apareciera y comparaba dos textos vacíos. Ahora espera a que
-   el mensaje esté en pantalla, y falla como debe.
-4. **Los límites de seguridad también afectan a las pruebas.** La tienda permite 10 pedidos y 5 registros
-   por hora desde la misma conexión. Diseñé las pruebas para gastar pocos (una sola cuenta compartida, solo
-   los pedidos necesarios).
-5. **Las pruebas también encuentran errores de texto y de seguridad**, no solo de lógica: los dos hallazgos
-   de esta etapa no rompían nada, pero uno contradice una decisión del proyecto y el otro filtra
-   información.
-6. **El ciclo completo de QA:** la prueba encuentra el error, se corrige en el proyecto y la misma prueba
+   primera vez: leía el mensaje antes de que apareciera. Y mi primera prueba de los textos de desarrollo de
+   UniGest revisaba la página **después** de iniciar sesión, cuando el error solo aparecía **antes**.
+4. **Investigar antes de reportar.** En UniGest vi la cifra de estudiantes en "—" y parecía un error; con
+   más espera mostraba 9: solo tardaba en cargar. No lo reporté. En cambio, el logo que "no cargaba" sí era
+   un archivo dañado, y lo confirmé comparando sus primeros bytes.
+5. **Los límites de seguridad también afectan a las pruebas.** La tienda permite 10 pedidos y 5 registros
+   por hora, y VisagStock 10 inicios de sesión cada 15 minutos. Diseñé las pruebas para gastar pocos: una
+   cuenta compartida y una sesión guardada.
+6. **Las pruebas deben poder repetirse.** Las del inventario guardan datos de verdad; si esperaban un
+   número fijo, la segunda ejecución fallaba. Ahora cada una lee el stock antes de actuar.
+7. **El ciclo completo de QA:** la prueba encuentra el error, se corrige en el proyecto y la misma prueba
    pasa a cuidar que no vuelva.
 
 ## Problemas que tuve y cómo los resolví
@@ -120,7 +142,11 @@ pruebas crean sus propios clientes con correos `@example.test`.
 | Varias pruebas fallaban con *strict mode violation* al añadir al carrito. | El aviso "Producto añadido" aparece dos veces en la página (en el detalle y flotante). | La prueba espera el primero de los dos; no es un error de la tienda. |
 | No podía elegir el departamento por su etiqueta. | Hay dos campos con la etiqueta "Departamento": el de entrega y el de facturación (oculto). | Lo busco por su rol: la lista desplegable (`combobox`) "Departamento *". |
 | Al confirmar el pedido se abría una pestaña de WhatsApp. | El botón abre `wa.me` con el resumen del pedido. | Un *fixture* bloquea `wa.me` en todas las pruebas y guarda el mensaje para revisarlo. |
-| Después de explorar, las pruebas empezaron a fallar con "Demasiados intentos". | Mis exploraciones gastaron el límite de 10 pedidos por hora de la tienda de prueba. | Reiniciar la tienda (el límite vive en memoria) y gastar menos pedidos por ejecución. |
+| Después de explorar, las pruebas fallaban con "Demasiados intentos". | Mis exploraciones gastaron el límite de pedidos por hora de la tienda de prueba. | Reiniciar la tienda (el límite vive en memoria) y gastar menos pedidos por ejecución. |
 | La prueba de enumeración de correos pasaba sin deber. | Leía el aviso antes de que la respuesta del servidor lo llenara. | Esperar con `expect(...).not.toBeEmpty()` antes de leerlo. |
-| El resumen decía 26 pruebas, pero eran 27. | Las pruebas de cuentas corren en cadena (modo *serial*): cuando una falla, Playwright salta las siguientes. La que venía después de la que encontró el error no se ejecutaba. | Al corregir el error se ejecutaron todas. Aprendí a revisar también las pruebas que no corrieron, no solo las que fallan. |
+| El resumen decía 26 pruebas, pero eran 27. | Las pruebas de cuentas corren en cadena (modo *serial*): cuando una falla, Playwright salta las siguientes. | Al corregir el error se ejecutaron todas. Aprendí a revisar también las pruebas que no corrieron. |
+| La prueba de "contraseña incorrecta" del inventario no encontraba el formulario de entrada. | La ventana nueva heredaba la sesión guardada del administrador, así que ya estaba adentro. | Abrirla explícitamente sin sesión: `storageState: { cookies: [], origins: [] }`. |
+| La prueba de stock bajo fallaba solo la segunda vez. | El mínimo ya había quedado igual al stock, y el botón "Guardar" solo aparece si el valor cambia. | Guardar solo cuando el valor es distinto. |
+| El botón "Entrar" era ambiguo en VisagStock. | También existe "Entrar como invitado". | Buscarlo con el nombre exacto "Entrar ↗". |
+| Las pruebas en línea fallaban por tiempo la primera vez. | Render duerme las aplicaciones gratuitas y tarda hasta 2 minutos en despertarlas. | El grupo `en-linea` tiene tiempos de espera mayores (hasta 4 minutos por prueba). |
 | TypeScript pedía la extensión `.js` en cada `import`. | Con `moduleResolution: nodenext` los `import` relativos deben llevarla. | Usar `moduleResolution: bundler`, que es como Playwright carga los archivos. |
