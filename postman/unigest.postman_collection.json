@@ -1,0 +1,1649 @@
+{
+  "info": {
+    "_postman_id": "a8cc8c39-016d-4463-adab-e13aa3d352e8",
+    "name": "UniGest API",
+    "description": "Pruebas de la API de UniGest en su demo pública. Solo lectura: inicia sesión con las cuentas de demostración, consulta y cierra sesión; no crea ni cambia datos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Estado y demo",
+      "description": "Rutas públicas: salud del servicio, versión y cuentas de la demo.",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/estado",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estado"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 en menos de 5 segundos', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+                  "});",
+                  "pm.test('dice que UniGest está bien', () => {",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.estado).to.eql('OK');",
+                  "    pm.expect(datos.aplicacion).to.eql('UniGest');",
+                  "    pm.expect(datos.version).to.match(/^\\d+\\.\\d+\\.\\d+$/);",
+                  "    pm.collectionVariables.set('version_estado', datos.version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Documentación OpenAPI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/v3/api-docs",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "v3",
+                "api-docs"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con la especificación', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().info.title).to.eql('UniGest API');",
+                  "});",
+                  "pm.test('la versión del estado coincide con la de la documentación', () => {",
+                  "    pm.expect(pm.collectionVariables.get('version_estado')).to.eql(pm.response.json().info.version);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cuentas de la demo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/demo",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "demo"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la demo está activa con sus tres cuentas', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.activo).to.eql(true);",
+                  "    pm.expect(datos.cuentas.map((c) => c.correo)).to.eql(['admin@demo.test', 'docente@demo.test', 'estudiante@demo.test']);",
+                  "    pm.expect(datos.clave).to.eql(pm.environment.get('unigest_clave'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Sin sesión",
+      "description": "Sin iniciar sesión, la API no entrega datos y no deja iniciar sesión sin token CSRF.",
+      "item": [
+        {
+          "name": "Sin sesión no hay estudiantes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/estudiantes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 (sin autenticar)', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin sesión no hay docentes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/docentes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docentes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 (sin autenticar)', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin sesión no hay matriculas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/matriculas",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "matriculas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 (sin autenticar)', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión sin token CSRF",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/login",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "admin@demo.test"
+                },
+                {
+                  "key": "password",
+                  "value": "{{unigest_clave}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403: el token CSRF es obligatorio', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedir token CSRF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión con una contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/login",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "admin@demo.test"
+                },
+                {
+                  "key": "password",
+                  "value": "Clave-Equivocada-9"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 y no inicia sesión', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.text()).to.not.include('autenticado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Administrador",
+      "description": "El administrador ve los datos de toda la institución.",
+      "item": [
+        {
+          "name": "Pedir token CSRF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión como administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/login",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "admin@demo.test"
+                },
+                {
+                  "key": "password",
+                  "value": "{{unigest_clave}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('entra con la cuenta de demostración', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().autenticado).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quién soy (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la sesión es de admin@demo.test con el rol ADMIN', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.correo).to.eql('admin@demo.test');",
+                  "    pm.expect(datos.roles).to.eql(['ROLE_ADMIN']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar estudiantes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/estudiantes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con una página de estudiantes', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.content).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(datos.totalElements).to.be.at.least(datos.content.length);",
+                  "});",
+                  "pm.test('cada estudiante trae sus campos', () => {",
+                  "    datos.content.forEach((e) => {",
+                  "        pm.expect(e).to.include.keys('id', 'codigo', 'documento', 'nombres', 'apellidos', 'correo', 'programa');",
+                  "        pm.expect(e.codigo).to.match(/^\\d{5}-\\d{4}$/);",
+                  "    });",
+                  "});",
+                  "pm.test('guarda un estudiante distinto al de la demo para la prueba de acceso indebido', () => {",
+                  "    const otro = datos.content.find((e) => e.correo !== 'estudiante@demo.test');",
+                  "    pm.expect(otro).to.exist;",
+                  "    pm.collectionVariables.set('otro_estudiante_id', otro.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar programas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/programas",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "programas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con los programas y sus códigos', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos).to.be.an('array').that.is.not.empty;",
+                  "    datos.forEach((p) => pm.expect(p).to.include.keys('id', 'codigo', 'nombre'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar períodos académicos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/periodos",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "periodos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 y guarda el período más reciente que ya empezó', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const empezados = pm.response.json().filter((p) => p.estado !== 'PLANIFICADO');",
+                  "    pm.expect(empezados).to.not.be.empty;",
+                  "    const ultimo = empezados.sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio)).pop();",
+                  "    pm.collectionVariables.set('periodo_admin_id', ultimo.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Boletín de un estudiante (como administrador)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/reportes/boletines/estudiantes/{{otro_estudiante_id}}?periodoId={{periodo_admin_id}}",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "boletines",
+                "estudiantes",
+                "{{otro_estudiante_id}}"
+              ],
+              "query": [
+                {
+                  "key": "periodoId",
+                  "value": "{{periodo_admin_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el administrador sí puede verlo', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(String(pm.response.json().estudianteId)).to.eql(String(pm.collectionVariables.get('otro_estudiante_id')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token CSRF para salir (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión (admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/logout",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra la sesión con 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Después de salir ya no hay sesión (admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Estudiante",
+      "description": "El estudiante solo ve su propio boletín. Incluye la prueba de acceso indebido (IDOR): pedir el boletín de otro estudiante cambiando el número.",
+      "item": [
+        {
+          "name": "Pedir token CSRF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión como estudiante",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/login",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "estudiante@demo.test"
+                },
+                {
+                  "key": "password",
+                  "value": "{{unigest_clave}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('entra con la cuenta de demostración', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().autenticado).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quién soy (estudiante)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la sesión es de estudiante@demo.test con el rol ESTUDIANTE', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.correo).to.eql('estudiante@demo.test');",
+                  "    pm.expect(datos.roles).to.eql(['ROLE_ESTUDIANTE']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El estudiante no puede ver la lista de estudiantes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/estudiantes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El estudiante no puede ver la lista de docentes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/docentes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docentes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El estudiante no puede ver la lista de matriculas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/matriculas",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "matriculas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El estudiante no puede ver el boletín de otro estudiante (IDOR)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/reportes/boletines/estudiantes/{{otro_estudiante_id}}?periodoId={{periodo_admin_id}}",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "reportes",
+                "boletines",
+                "estudiantes",
+                "{{otro_estudiante_id}}"
+              ],
+              "query": [
+                {
+                  "key": "periodoId",
+                  "value": "{{periodo_admin_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El estudiante no puede ver el espacio del docente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/docente/grupos",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "docente",
+                "grupos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis períodos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/estudiante/periodos",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "estudiante",
+                "periodos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con sus períodos', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos).to.be.an('array').that.is.not.empty;",
+                  "    pm.collectionVariables.set('periodo_id', datos[datos.length - 1].id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi boletín sin indicar el período",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/estudiante/boletin",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "estudiante",
+                "boletin"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 400: el período es obligatorio', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mi boletín del último período",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/estudiante/boletin?periodoId={{periodo_id}}",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "estudiante",
+                "boletin"
+              ],
+              "query": [
+                {
+                  "key": "periodoId",
+                  "value": "{{periodo_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con el boletín del propio estudiante', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.estudianteCodigo).to.eql('20261-0001');",
+                  "    pm.expect(String(datos.periodoId)).to.eql(String(pm.collectionVariables.get('periodo_id')));",
+                  "});",
+                  "pm.test('trae sus materias', () => {",
+                  "    pm.expect(datos.materias).to.be.an('array').that.is.not.empty;",
+                  "    datos.materias.forEach((m) => pm.expect(m).to.include.keys('codigo', 'nombre'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token CSRF para salir (estudiante)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión (estudiante)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/logout",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra la sesión con 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Después de salir ya no hay sesión (estudiante)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Docente",
+      "description": "El docente ve sus grupos y no los datos de administración ni el boletín de un estudiante.",
+      "item": [
+        {
+          "name": "Pedir token CSRF",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión como docente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/login",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "docente@demo.test"
+                },
+                {
+                  "key": "password",
+                  "value": "{{unigest_clave}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('entra con la cuenta de demostración', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().autenticado).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quién soy (docente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la sesión es de docente@demo.test con el rol DOCENTE', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.correo).to.eql('docente@demo.test');",
+                  "    pm.expect(datos.roles).to.eql(['ROLE_DOCENTE']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mis grupos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/docente/grupos",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "docente",
+                "grupos"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con sus grupos', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos).to.be.an('array').that.is.not.empty;",
+                  "    datos.forEach((g) => pm.expect(g).to.include.keys('id', 'codigo', 'asignatura', 'periodo', 'estado'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El docente no puede ver la lista de estudiantes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/estudiantes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estudiantes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El docente no puede ver la lista de docentes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/docentes",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "docentes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El docente no puede ver la lista de matriculas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/matriculas",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "matriculas"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El docente no puede ver el espacio del estudiante",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/mi-espacio/estudiante/boletin?periodoId={{periodo_id}}",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mi-espacio",
+                "estudiante",
+                "boletin"
+              ],
+              "query": [
+                {
+                  "key": "periodoId",
+                  "value": "{{periodo_id}}"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403 (prohibido)', () => pm.response.to.have.status(403));",
+                  "pm.test('no entrega datos', () => pm.expect(pm.response.text()).to.not.include('\"correo\"'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token CSRF para salir (docente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/csrf",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "csrf"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con el token CSRF', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.headerName).to.eql('X-CSRF-TOKEN');",
+                  "    pm.expect(datos.token).to.be.a('string').and.have.length.above(20);",
+                  "    pm.collectionVariables.set('csrf_token', datos.token);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión (docente)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-CSRF-TOKEN",
+                "value": "{{csrf_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/logout",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('cierra la sesión con 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Después de salir ya no hay sesión (docente)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{unigest}}/api/v1/auth/me",
+              "host": [
+                "{{unigest}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "csrf_token",
+      "value": ""
+    },
+    {
+      "key": "version_estado",
+      "value": ""
+    },
+    {
+      "key": "otro_estudiante_id",
+      "value": ""
+    },
+    {
+      "key": "periodo_id",
+      "value": ""
+    },
+    {
+      "key": "periodo_admin_id",
+      "value": ""
+    }
+  ]
+}

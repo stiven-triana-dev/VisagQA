@@ -1,0 +1,950 @@
+{
+  "info": {
+    "_postman_id": "eeab27bb-cc3f-4d48-bb04-5f65b4d3dd8d",
+    "name": "VisagStock API",
+    "description": "Pruebas de la API del inventario. La carpeta \"Invitado en línea\" usa la aplicación publicada sin guardar nada; la carpeta \"Administrador local\" usa una copia local y sí registra movimientos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Invitado en línea",
+      "description": "VisagStock publicado, con la cuenta de invitado: el servidor valida y calcula, pero nunca guarda. Usa la variable {{visagstock}}.",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/estado",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "estado"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con estado ok', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.eql({ estado: 'ok' });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "La cuenta de invitado está activa",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/invitado",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "invitado"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde activo: true', () => pm.expect(pm.response.json().activo).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sin sesión no hay resumen",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/resumen",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "resumen"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 con un mensaje claro', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.eql('Inicia sesión para continuar');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Entrar como invitado",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/sesion/invitado",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "sesion",
+                "invitado"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('entra como invitado', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json()).to.eql({ usuario: 'invitado', invitado: true });",
+                  "});",
+                  "pm.test('la cookie de sesión es HttpOnly y SameSite=Strict', () => {",
+                  "    const cookie = pm.response.headers.get('Set-Cookie') || '';",
+                  "    pm.expect(cookie).to.include('visagstock_sesion=');",
+                  "    pm.expect(cookie).to.include('HttpOnly');",
+                  "    pm.expect(cookie).to.include('SameSite=Strict');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Resumen del inventario",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/resumen",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "resumen"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con los 108 productos de la tienda', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.productos).to.eql(108);",
+                  "});",
+                  "pm.test('las cifras son coherentes', () => {",
+                  "    pm.expect(datos.unidades).to.be.at.least(0);",
+                  "    pm.expect(datos.agotados + datos.bajos).to.be.at.most(datos.productos);",
+                  "    pm.expect(datos.ultimos7Dias).to.include.keys('movimientos', 'ingresos', 'despachos', 'devoluciones', 'danadas');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Buscar productos sin importar mayúsculas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/productos?buscar=JEAN BAGGY&porPagina=5",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "buscar",
+                  "value": "JEAN BAGGY"
+                },
+                {
+                  "key": "porPagina",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 y respeta el tamaño de página', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.total).to.be.above(0);",
+                  "    pm.expect(datos.productos.length).to.be.at.most(5);",
+                  "});",
+                  "pm.test('todos los resultados son jeans baggy', () => {",
+                  "    datos.productos.forEach((p) => pm.expect(p.nombre.toLowerCase()).to.include('jean baggy'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Detalle de un producto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/productos/p042",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "p042"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con el jean y sus 5 tallas', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.producto.id).to.eql('p042');",
+                  "    pm.expect(datos.producto.tallas.map((t) => t.talla)).to.eql(['24-4', '26-6', '28-8', '30-10', '32-12']);",
+                  "});",
+                  "const talla = datos.producto.tallas.find((t) => t.talla === '28-8');",
+                  "pm.collectionVariables.set('invitado_talla_id', talla.tallaId);",
+                  "pm.collectionVariables.set('invitado_stock', talla.cantidad);",
+                  "pm.collectionVariables.set('invitado_despacho_imposible', talla.cantidad + 1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Producto que no existe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/productos/p999",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "p999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 404', () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().error).to.eql('Producto no encontrado');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ingreso de prueba (simulado)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagstock}}/api/movimientos",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"p042\",\n  \"tallaId\": \"{{invitado_talla_id}}\",\n  \"tipo\": \"ingreso\",\n  \"condicion\": null,\n  \"cantidad\": 3,\n  \"motivo\": \"Prueba de Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cuerpo = JSON.parse(pm.request.body.raw.replace('\"{{invitado_talla_id}}\"', pm.collectionVariables.get('invitado_talla_id')));",
+                  "pm.request.body.raw = JSON.stringify(cuerpo);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 marcado como simulado', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.simulado).to.eql(true);",
+                  "    pm.expect(datos.usuario).to.eql('invitado');",
+                  "});",
+                  "pm.test('calcula el stock que quedaría', () => {",
+                  "    pm.expect(datos.stockResultante).to.eql(Number(pm.collectionVariables.get('invitado_stock')) + 3);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El ingreso simulado no cambió el stock",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/productos/p042",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "p042"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la talla 28-8 sigue igual', () => {",
+                  "    const talla = pm.response.json().producto.tallas.find((t) => t.talla === '28-8');",
+                  "    pm.expect(talla.cantidad).to.eql(Number(pm.collectionVariables.get('invitado_stock')));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Despacho mayor al stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagstock}}/api/movimientos",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"p042\",\n  \"tallaId\": \"{{invitado_talla_id}}\",\n  \"tipo\": \"despacho\",\n  \"condicion\": null,\n  \"cantidad\": \"{{invitado_despacho_imposible}}\",\n  \"motivo\": \"Venta en tienda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cuerpo = JSON.parse(pm.request.body.raw",
+                  "    .replace('\"{{invitado_talla_id}}\"', pm.collectionVariables.get('invitado_talla_id'))",
+                  "    .replace('\"{{invitado_despacho_imposible}}\"', pm.collectionVariables.get('invitado_despacho_imposible')));",
+                  "pm.request.body.raw = JSON.stringify(cuerpo);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 409: aunque sea simulado, valida el stock', () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().error).to.include('No hay suficiente stock');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Movimiento con datos mal formados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagstock}}/api/movimientos",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"camiseta\",\n  \"tallaId\": null,\n  \"tipo\": \"robo\",\n  \"cantidad\": -1,\n  \"motivo\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 400 y señala cada campo con error', () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(datos.error).to.eql('Datos no válidos');",
+                  "    const campos = datos.campos.map((c) => c.campo);",
+                  "    ['productoId', 'tipo', 'cantidad', 'motivo'].forEach((c) => pm.expect(campos).to.include(c));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Movimiento enviado desde otro sitio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://sitio-malo.example"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagstock}}/api/movimientos",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"p001\",\n  \"tallaId\": null,\n  \"tipo\": \"ingreso\",\n  \"condicion\": null,\n  \"cantidad\": 1,\n  \"motivo\": \"Compra a proveedor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403: solo se aceptan cambios desde el mismo sitio', () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error).to.eql('Origen no permitido');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/sesion",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "sesion"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Después de salir ya no hay sesión",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagstock}}/api/sesion",
+              "host": [
+                "{{visagstock}}"
+              ],
+              "path": [
+                "api",
+                "sesion"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Administrador local",
+      "description": "Copia local de VisagStock sobre la base de prueba de la tienda: aquí sí se guardan movimientos. Usa la variable {{inventario}}.",
+      "item": [
+        {
+          "name": "Contraseña incorrecta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventario}}/api/sesion",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "sesion"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{inventario_admin_usuario}}\",\n  \"clave\": \"clave-equivocada-123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 sin entregar cookie', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.eql('Usuario o contraseña incorrectos');",
+                  "    pm.expect(pm.response.headers.get('Set-Cookie')).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión como administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventario}}/api/sesion",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "sesion"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"usuario\": \"{{inventario_admin_usuario}}\",\n  \"clave\": \"{{inventario_admin_clave}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('entra y no es invitado', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().invitado).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Stock actual del jean",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario}}/api/productos/p042",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "productos",
+                "p042"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con el jean y sus 5 tallas', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos.producto.id).to.eql('p042');",
+                  "    pm.expect(datos.producto.tallas.map((t) => t.talla)).to.eql(['24-4', '26-6', '28-8', '30-10', '32-12']);",
+                  "});",
+                  "const talla = datos.producto.tallas.find((t) => t.talla === '28-8');",
+                  "pm.collectionVariables.set('admin_talla_id', talla.tallaId);",
+                  "pm.collectionVariables.set('admin_stock', talla.cantidad);",
+                  "pm.collectionVariables.set('admin_despacho_imposible', talla.cantidad + 1);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ingreso real",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventario}}/api/movimientos",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"p042\",\n  \"tallaId\": \"{{admin_talla_id}}\",\n  \"tipo\": \"ingreso\",\n  \"condicion\": null,\n  \"cantidad\": 2,\n  \"motivo\": \"Compra a proveedor (Postman)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cuerpo = JSON.parse(pm.request.body.raw.replace('\"{{admin_talla_id}}\"', pm.collectionVariables.get('admin_talla_id')));",
+                  "pm.request.body.raw = JSON.stringify(cuerpo);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 201 y se guarda de verdad', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(datos.simulado).to.eql(false);",
+                  "    pm.expect(datos.cantidad).to.eql(2);",
+                  "    pm.expect(datos.stockResultante).to.eql(Number(pm.collectionVariables.get('admin_stock')) + 2);",
+                  "    pm.collectionVariables.set('movimiento_id', datos.id);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El ingreso aparece primero en el kárdex",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{inventario}}/api/movimientos?productoId=p042&porPagina=1",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ],
+              "query": [
+                {
+                  "key": "productoId",
+                  "value": "p042"
+                },
+                {
+                  "key": "porPagina",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el último movimiento del jean es el que acabamos de registrar', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const ultimo = pm.response.json().movimientos[0];",
+                  "    pm.expect(String(ultimo.id)).to.eql(String(pm.collectionVariables.get('movimiento_id')));",
+                  "    pm.expect(ultimo.tipo).to.eql('ingreso');",
+                  "    pm.expect(ultimo.motivo).to.eql('Compra a proveedor (Postman)');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Despacho mayor al stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{inventario}}/api/movimientos",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "movimientos"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productoId\": \"p042\",\n  \"tallaId\": \"{{admin_talla_id}}\",\n  \"tipo\": \"despacho\",\n  \"condicion\": null,\n  \"cantidad\": 100000,\n  \"motivo\": \"Venta en tienda\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const cuerpo = JSON.parse(pm.request.body.raw.replace('\"{{admin_talla_id}}\"', pm.collectionVariables.get('admin_talla_id')));",
+                  "pm.request.body.raw = JSON.stringify(cuerpo);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 409 y no resta nada', () => {",
+                  "    pm.response.to.have.status(409);",
+                  "    pm.expect(pm.response.json().error).to.include('No hay suficiente stock');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{inventario}}/api/sesion",
+              "host": [
+                "{{inventario}}"
+              ],
+              "path": [
+                "api",
+                "sesion"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 204', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "invitado_talla_id",
+      "value": ""
+    },
+    {
+      "key": "invitado_stock",
+      "value": ""
+    },
+    {
+      "key": "invitado_despacho_imposible",
+      "value": ""
+    },
+    {
+      "key": "admin_talla_id",
+      "value": ""
+    },
+    {
+      "key": "admin_stock",
+      "value": ""
+    },
+    {
+      "key": "admin_despacho_imposible",
+      "value": ""
+    },
+    {
+      "key": "movimiento_id",
+      "value": ""
+    }
+  ]
+}

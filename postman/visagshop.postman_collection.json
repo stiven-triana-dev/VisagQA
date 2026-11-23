@@ -1,0 +1,819 @@
+{
+  "info": {
+    "_postman_id": "d4faead2-9ef9-4023-be96-93e669a77995",
+    "name": "VisagShop API",
+    "description": "Pruebas de la API de la tienda contra una copia local con base de datos de prueba (crea cuentas y pedidos). Nunca se corre contra la tienda publicada.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Cuentas",
+      "description": "Registro, inicio de sesión y el mensaje único que no revela qué correos existen.",
+      "item": [
+        {
+          "name": "Sin sesión no hay cliente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tienda}}/api/account/me",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "me"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 con user: null', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().user).to.eql(null);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Registrar un cliente nuevo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/register",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Laura\",\n  \"lastName\": \"Postman\",\n  \"email\": \"{{correo_cliente}}\",\n  \"password\": \"Clave-Segura-2026\",\n  \"confirm\": \"Clave-Segura-2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('correo_cliente', 'postman.' + Date.now() + '@example.test');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 201 y deja la sesión iniciada', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.user.email).to.eql(pm.collectionVariables.get('correo_cliente'));",
+                  "    pm.expect(datos.user).to.not.have.any.keys('password', 'passwordHash');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión del cliente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/logout",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 y lleva a iniciar sesión', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().redirect).to.eql('/login');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión con un correo que no existe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/login",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nadie.postman@example.test\",\n  \"password\": \"Clave-Equivocada-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 con el mensaje único', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().error).to.eql('El correo o la contraseña no son correctos.');",
+                  "    pm.collectionVariables.set('respuesta_sin_cuenta', pm.response.text());",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión con la contraseña equivocada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/login",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{correo_cliente}}\",\n  \"password\": \"Clave-Equivocada-1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde exactamente lo mismo que con un correo inexistente', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.text()).to.eql(pm.collectionVariables.get('respuesta_sin_cuenta'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Iniciar sesión con los datos correctos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/login",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{correo_cliente}}\",\n  \"password\": \"Clave-Segura-2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 y lleva al perfil', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().redirect).to.eql('/profile');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cerrar sesión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/account/logout",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "account",
+                "logout"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Pedidos",
+      "description": "El servidor calcula los precios con la base de datos y rechaza datos trampa.",
+      "item": [
+        {
+          "name": "Pedido con un precio falso",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"pais\": \"Colombia\",\n  \"nombre\": \"Laura\",\n  \"apellidos\": \"Pruebas Postman\",\n  \"documento\": \"\",\n  \"celular\": \"3001234567\",\n  \"direccion\": \"Calle 12 # 12-57\",\n  \"complemento\": \"\",\n  \"ciudad\": \"Lebrija\",\n  \"departamento\": \"Santander\",\n  \"postal\": \"\",\n  \"medio-pago\": \"contraentrega\",\n  \"facturacion\": \"misma\",\n  \"fact_direccion\": \"\",\n  \"fact_ciudad\": \"\",\n  \"fact_departamento\": \"\",\n  \"items\": [\n    {\n      \"id\": \"p042\",\n      \"talla\": \"28-8\",\n      \"cant\": 1,\n      \"precio\": 1,\n      \"price\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 201 con un número de pedido VS', () => {",
+                  "    pm.response.to.have.status(201);",
+                  "    pm.expect(datos.code).to.match(/^VS-\\d{4,}$/);",
+                  "    pm.collectionVariables.set('pedido_codigo', datos.code);",
+                  "    pm.collectionVariables.set('pedido_numero', datos.number);",
+                  "});",
+                  "pm.test('ignora el precio enviado y cobra el real: 130.000', () => pm.expect(datos.subtotal).to.eql(130000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido con una talla que no existe",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"pais\": \"Colombia\",\n  \"nombre\": \"Laura\",\n  \"apellidos\": \"Pruebas Postman\",\n  \"documento\": \"\",\n  \"celular\": \"3001234567\",\n  \"direccion\": \"Calle 12 # 12-57\",\n  \"complemento\": \"\",\n  \"ciudad\": \"Lebrija\",\n  \"departamento\": \"Santander\",\n  \"postal\": \"\",\n  \"medio-pago\": \"contraentrega\",\n  \"facturacion\": \"misma\",\n  \"fact_direccion\": \"\",\n  \"fact_ciudad\": \"\",\n  \"fact_departamento\": \"\",\n  \"items\": [\n    {\n      \"id\": \"p042\",\n      \"talla\": \"XXL\",\n      \"cant\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 400 nombrando la talla', () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('La talla XXL no está disponible para Jean baggy · Negro.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido con 100 unidades de una prenda",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"pais\": \"Colombia\",\n  \"nombre\": \"Laura\",\n  \"apellidos\": \"Pruebas Postman\",\n  \"documento\": \"\",\n  \"celular\": \"3001234567\",\n  \"direccion\": \"Calle 12 # 12-57\",\n  \"complemento\": \"\",\n  \"ciudad\": \"Lebrija\",\n  \"departamento\": \"Santander\",\n  \"postal\": \"\",\n  \"medio-pago\": \"contraentrega\",\n  \"facturacion\": \"misma\",\n  \"fact_direccion\": \"\",\n  \"fact_ciudad\": \"\",\n  \"fact_departamento\": \"\",\n  \"items\": [\n    {\n      \"id\": \"p042\",\n      \"talla\": \"28-8\",\n      \"cant\": 100\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 400: el máximo es 99 por prenda', () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.json().error).to.eql('La cantidad de cada prenda debe estar entre 1 y 99.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedido enviado desde otro sitio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://sitio-malo.example"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/api/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "api",
+                "orders"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"\",\n  \"pais\": \"Colombia\",\n  \"nombre\": \"Laura\",\n  \"apellidos\": \"Pruebas Postman\",\n  \"documento\": \"\",\n  \"celular\": \"3001234567\",\n  \"direccion\": \"Calle 12 # 12-57\",\n  \"complemento\": \"\",\n  \"ciudad\": \"Lebrija\",\n  \"departamento\": \"Santander\",\n  \"postal\": \"\",\n  \"medio-pago\": \"contraentrega\",\n  \"facturacion\": \"misma\",\n  \"fact_direccion\": \"\",\n  \"fact_ciudad\": \"\",\n  \"fact_departamento\": \"\",\n  \"items\": [\n    {\n      \"id\": \"p001\",\n      \"talla\": \"Ajustable\",\n      \"cant\": 1\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 403: solo se aceptan pedidos desde la propia tienda', () => {",
+                  "    pm.response.to.have.status(403);",
+                  "    pm.expect(pm.response.json().error).to.eql('Origen de solicitud no autorizado.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Panel de administración",
+      "description": "El panel exige usuario y contraseña (autenticación básica) y deja cambiar el estado de un pedido.",
+      "item": [
+        {
+          "name": "Panel sin credenciales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tienda}}/admin/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "admin",
+                "orders"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 y pide autenticación básica', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.headers.get('WWW-Authenticate')).to.include('Basic');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Panel con credenciales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tienda}}/admin/orders",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "admin",
+                "orders"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{tienda_admin_usuario}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{tienda_admin_clave}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200 y muestra el pedido nuevo', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('pedido_codigo'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Confirmar el pedido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/admin/api/orders/{{pedido_numero}}",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "orders",
+                "{{pedido_numero}}"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{tienda_admin_usuario}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{tienda_admin_clave}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmado\",\n  \"adminNote\": \"Confirmado desde Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado de pedido no válido",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "{{tienda}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{tienda}}/admin/api/orders/{{pedido_numero}}",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "admin",
+                "api",
+                "orders",
+                "{{pedido_numero}}"
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{tienda_admin_usuario}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{tienda_admin_clave}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"regalado\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 400 con el mensaje de validación', () => {",
+                  "    pm.response.to.have.status(400);",
+                  "    pm.expect(pm.response.text()).to.include('Elige un estado válido.');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "El pedido aparece entre los confirmados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{tienda}}/admin/orders?estado=confirmado",
+              "host": [
+                "{{tienda}}"
+              ],
+              "path": [
+                "admin",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "confirmado"
+                }
+              ]
+            },
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{tienda_admin_usuario}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{tienda_admin_clave}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('el filtro de confirmados lo incluye', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.text()).to.include(pm.collectionVariables.get('pedido_codigo'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "correo_cliente",
+      "value": ""
+    },
+    {
+      "key": "respuesta_sin_cuenta",
+      "value": ""
+    },
+    {
+      "key": "pedido_codigo",
+      "value": ""
+    },
+    {
+      "key": "pedido_numero",
+      "value": ""
+    }
+  ]
+}

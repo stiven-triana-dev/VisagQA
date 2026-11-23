@@ -1,0 +1,641 @@
+{
+  "info": {
+    "_postman_id": "e22804d6-9e02-49f2-8289-ca7e11b68d3c",
+    "name": "VisagAssist API",
+    "description": "Pruebas de la API del asistente con IA en línea. No envía preguntas reales al chat: solo comprueba el estado, la herramienta de búsqueda y las defensas que actúan antes de llamar a la IA.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Estado",
+      "description": "Salud del servicio y de su conexión a la base de datos de la tienda.",
+      "item": [
+        {
+          "name": "Estado del servicio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/estado",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estado"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 200: VisagAssist está bien', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos.estado).to.eql('OK');",
+                  "    pm.expect(datos.aplicacion).to.eql('VisagAssist');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Estado de la base de datos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/estado/base",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "estado",
+                "base"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('la conexión de solo lectura a la tienda funciona', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(pm.response.json().base_de_datos).to.eql('OK');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Herramienta de productos",
+      "description": "La misma búsqueda que usa el agente de IA, probada directamente: filtros, orden y límites.",
+      "item": [
+        {
+          "name": "Buscar gorras por texto",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?texto=gorra&limite=3",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "texto",
+                  "value": "gorra"
+                },
+                {
+                  "key": "limite",
+                  "value": "3"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const datos = pm.response.json();",
+                  "pm.test('responde 200 con 3 resultados como máximo', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.expect(datos).to.be.an('array').that.is.not.empty;",
+                  "    pm.expect(datos.length).to.be.at.most(3);",
+                  "});",
+                  "pm.test('todos son gorras y traen sus campos', () => {",
+                  "    datos.forEach((p) => {",
+                  "        pm.expect(p).to.include.keys('id', 'nombre', 'categoria', 'precio', 'tallas');",
+                  "        pm.expect(p.nombre.toLowerCase()).to.include('gorra');",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrar por categoría",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?categoria=Pantalones&limite=5",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "categoria",
+                  "value": "Pantalones"
+                },
+                {
+                  "key": "limite",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('todos los resultados son de la categoría pedida', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    pm.response.json().forEach((p) => pm.expect(p.categoria).to.eql('Pantalones'));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Filtrar por precio máximo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?precio_maximo=50000&limite=20",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "precio_maximo",
+                  "value": "50000"
+                },
+                {
+                  "key": "limite",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('ningún producto pasa de 50.000', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const datos = pm.response.json();",
+                  "    pm.expect(datos).to.not.be.empty;",
+                  "    datos.forEach((p) => pm.expect(p.precio).to.be.at.most(50000));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ordenar del más caro al más barato",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?orden=mas_caro&limite=10",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "orden",
+                  "value": "mas_caro"
+                },
+                {
+                  "key": "limite",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('los precios van de mayor a menor', () => {",
+                  "    pm.response.to.have.status(200);",
+                  "    const precios = pm.response.json().map((p) => p.precio);",
+                  "    pm.expect(precios).to.eql([...precios].sort((a, b) => b - a));",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedir más de 20 resultados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?limite=21",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "21"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422: el límite máximo es 20', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    const error = pm.response.json().detail[0];",
+                  "    pm.expect(error.loc).to.eql(['query', 'limite']);",
+                  "    pm.expect(error.type).to.eql('less_than_equal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Pedir 0 resultados",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?limite=0",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "limite",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422: el mínimo es 1', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail[0].type).to.eql('greater_than_equal');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Orden que no existe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/herramientas/productos?orden=al_azar",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "herramientas",
+                "productos"
+              ],
+              "query": [
+                {
+                  "key": "orden",
+                  "value": "al_azar"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422: solo acepta mas_barato o mas_caro', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail[0].loc).to.eql(['query', 'orden']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Seguridad del chat",
+      "description": "Comprueba las defensas sin hacerle preguntas reales a la IA: cada pregunta gasta la cuota gratuita de Gemini, y estas peticiones se rechazan antes de llegar al modelo.",
+      "item": [
+        {
+          "name": "Pase de identidad falso en el chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer pase.falso.123"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/chat",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"¿Tienen jeans talla 32?\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401 sin llamar a la IA', () => {",
+                  "    pm.response.to.have.status(401);",
+                  "    pm.expect(pm.response.json().detail).to.eql('Pase de identidad no válido');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mensaje vacío",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/chat",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422: el mensaje debe tener entre 1 y 500 caracteres', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail[0].loc).to.eql(['body', 'mensaje']);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mensaje de más de 500 caracteres",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/chat",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "chat"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422 sin llamar a la IA', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail[0].type).to.eql('string_too_long');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Conversación que no existe",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/conversaciones/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversaciones",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 404', () => {",
+                  "    pm.response.to.have.status(404);",
+                  "    pm.expect(pm.response.json().detail).to.eql('Conversación no encontrada');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Código de conversación mal formado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/conversaciones/abc",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversaciones",
+                "abc"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 422: el código debe ser un UUID', () => {",
+                  "    pm.response.to.have.status(422);",
+                  "    pm.expect(pm.response.json().detail[0].type).to.eql('uuid_parsing');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial con un pase falso",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer basura"
+              }
+            ],
+            "url": {
+              "raw": "{{visagassist}}/api/v1/conversaciones/00000000-0000-4000-8000-000000000000",
+              "host": [
+                "{{visagassist}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "conversaciones",
+                "00000000-0000-4000-8000-000000000000"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('responde 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": []
+}

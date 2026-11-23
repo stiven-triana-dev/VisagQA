@@ -1,12 +1,12 @@
 # VisagQA
 
 Pruebas automáticas **de punta a punta** para mis proyectos: **VisagShop** (la tienda), **VisagStock**
-(su inventario), **UniGest** (sistema académico) y, en la siguiente etapa, las APIs de **VisagAssist**.
+(su inventario), **UniGest** (sistema académico) y **VisagAssist** (asistente con IA).
 
 Cada proyecto ya tiene pruebas por dentro (unitarias y de integración). Lo que faltaba era probarlos
 **desde afuera, como los usa una persona**: abrir la página, buscar, elegir talla, llenar el formulario,
-iniciar sesión con cada rol. Eso es lo que hace este repositorio, con Playwright, como lo haría un
-analista QA.
+iniciar sesión con cada rol. Y también **por debajo, directamente contra sus APIs**, con Postman. Eso es
+lo que hace este repositorio, como lo haría un analista QA.
 
 ![Reporte de Playwright con las 45 pruebas pasando](docs/reporte.png)
 
@@ -16,10 +16,11 @@ analista QA.
 | --- | --- | --- |
 | 1 | VisagShop: catálogo, carrito, pedido, cuentas y panel | ✅ 27 pruebas |
 | 2 | VisagStock (administrador e invitado) y UniGest (tres roles) | ✅ 18 pruebas |
-| 3 | APIs con Postman / Newman | Próximamente |
+| 3 | APIs de las cuatro aplicaciones con Postman y Newman | ✅ 97 peticiones, 117 comprobaciones |
 | 4 | GitHub Actions, prueba diaria en línea y reportes | Próximamente |
 
-**45 pruebas en total. Encontraron 5 errores reales, y ya están corregidos en cada proyecto.**
+**45 pruebas de navegador y 117 comprobaciones de API. Encontraron 6 errores reales, y ya están corregidos
+en cada proyecto.**
 
 ## Tres grupos de pruebas
 
@@ -61,6 +62,29 @@ tenga movimientos de ejecuciones anteriores.
 
 Cada prueba guarda **una captura y un video**, y si falla, también la traza paso a paso.
 
+## Pruebas de API con Postman y Newman
+
+Las pruebas de navegador revisan lo que ve una persona; las de API revisan **lo que responde el servidor**:
+el código (200, 401, 403, 409…), los datos y los mensajes. Son más rápidas y llegan a casos que la
+pantalla no deja hacer, como mandar un precio falso o pedir el boletín de otro estudiante.
+
+Las colecciones están en `postman/` y **se pueden importar en la aplicación de Postman** (Importar →
+elegir el archivo) junto con su entorno. Newman las ejecuta desde la terminal.
+
+| Colección | Dónde | Qué comprueba | Peticiones | Comprobaciones |
+| --- | --- | --- | --- | --- |
+| **UniGest API** | En línea, solo lectura | Estado y versión; sin sesión **401**; sin token CSRF **403**; contraseña incorrecta **401**; los tres roles con su rol correcto; el administrador lista estudiantes (con sus campos), programas y boletines; el estudiante y el docente reciben **403** en todo lo ajeno, **incluido el boletín de otro estudiante (IDOR)**; cerrar sesión. | 44 | 58 |
+| **VisagStock API** · invitado | En línea | Sin sesión **401**; cookie `HttpOnly` y `SameSite=Strict`; resumen con los 108 productos; búsqueda; producto inexistente **404**; ingreso simulado que **no cambia el stock**; despacho mayor al stock **409**; datos mal formados **400** campo por campo; petición desde otro sitio **403**. | 15 | 19 |
+| **VisagStock API** · administrador | Copia local | Contraseña incorrecta **401** sin cookie; ingreso real **201** que aparece primero en el kárdex; despacho imposible **409**. | 7 | 7 |
+| **VisagShop API** | Copia local | Registro; el inicio de sesión responde **exactamente lo mismo** exista o no el correo; pedido que **ignora un precio falso**; talla inexistente y 100 unidades **400**; pedido desde otro sitio **403**; panel sin clave **401**; cambio de estado de un pedido y estado inválido **400**. | 16 | 17 |
+| **VisagAssist API** | En línea | Estado del servicio y de su base; búsqueda por texto, categoría, precio máximo y orden; límites de 1 a 20 resultados **422**; conversación inexistente **404** y mal formada **422**; pase de identidad falso **401**; mensaje vacío o de más de 500 caracteres **422**. | 15 | 16 |
+
+**El chat de VisagAssist nunca recibe una pregunta real**: cada una gasta la cuota gratuita de Gemini. Las
+pruebas solo usan peticiones que el servidor rechaza antes de llamar a la IA (pase falso, mensaje vacío o
+demasiado largo).
+
+![Reporte de Newman de la colección de UniGest](docs/reporte-api.png)
+
 ## Errores que encontraron al hacer las pruebas
 
 | Proyecto | Hallazgo | Por qué importa | Corrección |
@@ -70,6 +94,7 @@ Cada prueba guarda **una captura y un video**, y si falla, también la traza pas
 | UniGest | El **logo no se veía**. | Un script que usé para quitar comentarios abrió el PNG como texto y lo guardó dañado: sus primeros bytes pasaron de `89 50 4E 47` a `EF BF BD`. | Lo recuperé del historial de git y revisé los 357 archivos binarios de mis 6 proyectos: era el único dañado. |
 | UniGest | La demo pública mostraba **"Entorno local de desarrollo"** y **"Datos del servidor local"**. | Eran los textos iniciales de la página y solo cambiaban cuando confirmaba el modo demo. | Ahora arranca con textos neutros y solo dice "Entorno local" cuando de verdad lo es. |
 | UniGest | Con una contraseña incorrecta decía **"La sesión no es válida o ha expirado."** | La persona no tenía sesión: solo escribió mal la clave. Todos los errores 401 compartían ese mensaje. | En el inicio de sesión ahora dice «El correo o la contraseña no son correctos.». |
+| UniGest | La API de estado decía **versión "0.3.0"**, pero el proyecto va en la **0.11.0** (encontrado con Postman). | La versión estaba escrita a mano en cuatro lugares y una se quedó atrás. | El estado y la documentación leen la versión del `pom.xml` al compilar (`build-info` de Spring Boot), con una prueba de Java que lo verifica. Probé el cambio en una rama temporal: las 101 pruebas pasaron en GitHub antes de publicarlo. |
 
 Primero dejé cada prueba **fallando a propósito** (una prueba de QA que falla por un error real está
 haciendo su trabajo), después corregí el proyecto y ahora pasan. Si un error vuelve, la prueba lo detecta.
@@ -89,13 +114,16 @@ npx playwright install chromium
 | --- | --- |
 | `tienda` | VisagShop en `http://localhost:3210` con `ADMIN_USERNAME=admin_qa`, `ADMIN_PASSWORD=clave-admin-qa-2026` y `WHATSAPP_NUMBER=573000000000`. También puede arrancarla Playwright: `TIENDA_DIR=../VisagShop TIENDA_DATABASE_URL=postgres://… npm run test:tienda`. |
 | `inventario` | VisagStock en `http://localhost:3220`, sobre la **misma base** de la tienda, con `ADMIN_USERNAME=admin_qa` y `ADMIN_PASSWORD=clave-stock-qa-2026`. |
-| `en-linea` | Nada: usa las aplicaciones publicadas. La primera prueba puede tardar hasta 2 minutos mientras Render las despierta. `UNIGEST_URL` permite apuntar a otra copia de UniGest. |
+| `en-linea` y `api:en-linea` | Nada: usan las aplicaciones publicadas. La primera prueba puede tardar hasta 2 minutos mientras Render las despierta. `UNIGEST_URL` permite apuntar a otra copia de UniGest. |
 
 ```bash
 npm test                  # los tres grupos
 npm run test:tienda
 npm run test:inventario
 npm run test:en-linea
+npm run api               # las cinco corridas de Postman con Newman
+npm run api:en-linea      # solo UniGest, VisagStock invitado y VisagAssist
+npm run api:local         # solo VisagShop y VisagStock administrador (copias locales)
 npm run reporte           # abre el reporte con capturas y videos
 npm run typecheck         # revisa los tipos de TypeScript
 ```
@@ -111,6 +139,9 @@ npm run typecheck         # revisa los tipos de TypeScript
 | **Sesión guardada** (`storageState`) | Iniciar sesión una vez en el inventario y reutilizarla | VisagStock permite 10 inicios de sesión cada 15 minutos; sin esto, las pruebas chocaban con ese límite. |
 | **Fixture propio de WhatsApp** | Bloquear `wa.me` en todas las pruebas de la tienda | Ninguna prueba puede enviar un mensaje real por accidente, y todas pueden leer lo que se iba a enviar. |
 | **PostgreSQL de prueba** | Las bases de las copias | Es el mismo motor que usan las aplicaciones en producción (Neon). |
+| **Postman** | Escribir las colecciones de API con sus comprobaciones en JavaScript (`pm.test`) | Es la herramienta que más piden las ofertas de QA, y las colecciones se pueden abrir y correr a mano en la aplicación. |
+| **Newman** | Ejecutar las colecciones desde la terminal (`scripts/api.mjs`) | Corre lo mismo que Postman sin abrir la aplicación, así se puede automatizar. |
+| **newman-reporter-htmlextra** y JUnit | Reportes de las APIs en `reportes/api/` | El HTML muestra cada petición con su respuesta; el XML JUnit lo entienden herramientas como GitHub Actions. |
 
 ## Lo que aprendí
 
@@ -134,6 +165,16 @@ npm run typecheck         # revisa los tipos de TypeScript
    número fijo, la segunda ejecución fallaba. Ahora cada una lee el stock antes de actuar.
 7. **El ciclo completo de QA:** la prueba encuentra el error, se corrige en el proyecto y la misma prueba
    pasa a cuidar que no vuelva.
+8. **Probar la API llega donde la pantalla no llega.** Con Postman pude mandar un precio falso, pedir el
+   boletín de otro estudiante cambiando un número (IDOR) o enviar datos que el formulario no deja escribir.
+   Así encontré el sexto error, la versión desactualizada, que ninguna pantalla muestra.
+9. **Una prueba de seguridad debe aislar la causa.** Mi primera prueba de IDOR pedía el boletín ajeno sin
+   período: el 403 podía deberse a eso. Ahora lo pide con un período válido, así el 403 solo puede venir de
+   los permisos.
+10. **No gastar lo que cuesta.** Al chat de VisagAssist solo le envío peticiones que se rechazan antes de
+    llegar a la IA, y lo verifiqué en el código.
+11. **Probar los cambios grandes antes de publicarlos.** El arreglo de la versión tocaba Java; lo subí a una
+    rama temporal, esperé las 101 pruebas en GitHub, lo fusioné y borré la rama.
 
 ## Problemas que tuve y cómo los resolví
 
@@ -149,4 +190,15 @@ npm run typecheck         # revisa los tipos de TypeScript
 | La prueba de stock bajo fallaba solo la segunda vez. | El mínimo ya había quedado igual al stock, y el botón "Guardar" solo aparece si el valor cambia. | Guardar solo cuando el valor es distinto. |
 | El botón "Entrar" era ambiguo en VisagStock. | También existe "Entrar como invitado". | Buscarlo con el nombre exacto "Entrar ↗". |
 | Las pruebas en línea fallaban por tiempo la primera vez. | Render duerme las aplicaciones gratuitas y tarda hasta 2 minutos en despertarlas. | El grupo `en-linea` tiene tiempos de espera mayores (hasta 4 minutos por prueba). |
+| En Postman, el ID de la talla llegaba como texto (`"5"`) y el servidor lo rechazaba. | Una variable `{{talla_id}}` dentro del JSON tiene que ir entre comillas para que el JSON sea válido, y entonces se envía como texto. | Un script previo a la petición reemplaza la variable por su número antes de enviarla. |
+| UniGest respondía **400** al pedir el boletín como administrador. | El reporte exige el período (`periodoId`). Era un error de mi prueba, no de UniGest. | La colección consulta primero los períodos y usa el más reciente que ya empezó. |
+| A mitad de las pruebas la sesión de UniGest se perdió con **401**. | Render estaba reiniciando UniGest para publicar la corrección de la versión. | Esperar a que el estado responda la versión nueva antes de volver a correr las pruebas. |
 | TypeScript pedía la extensión `.js` en cada `import`. | Con `moduleResolution: nodenext` los `import` relativos deben llevarla. | Usar `moduleResolution: bundler`, que es como Playwright carga los archivos. |
+
+## Seguridad de las dependencias
+
+`npm audit` avisa de vulnerabilidades en paquetes internos de Newman (por ejemplo `lodash`,
+`node-forge` y `csv-parse`). Las revisé: Newman solo corre en mi computador y en GitHub Actions, ejecuta
+**mis propias colecciones** contra mis aplicaciones y no recibe datos de terceros ni llega a producción, así
+que el riesgo es bajo. Lo dejo escrito en vez de esconderlo, y lo vuelvo a revisar cuando Newman publique
+una versión nueva.
