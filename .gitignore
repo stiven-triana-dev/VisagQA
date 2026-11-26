@@ -3,3 +3,4 @@ reportes/
 tienda-app/
 .env
 *.log
+inventario-app/

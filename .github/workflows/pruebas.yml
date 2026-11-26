@@ -1,0 +1,113 @@
+name: Pruebas
+
+on:
+  push:
+    branches: [main, ci-etapa-4]
+  pull_request:
+  schedule:
+    - cron: '0 12 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: pruebas-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  navegador-local:
+    name: Navegador · tienda e inventario (copias locales)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: visag
+          POSTGRES_PASSWORD: visag_ci
+          POSTGRES_DB: visagqa_tienda
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U visag"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      BASE_DE_PRUEBA: postgres://visag:visag_ci@localhost:5432/visagqa_tienda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: mkdir -p reportes/servidores
+      - uses: ./.github/actions/copias-locales
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=tienda --project=inventario
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-navegador-local
+          path: reportes/
+          retention-days: 14
+
+  api-local:
+    name: API · VisagShop y VisagStock administrador (copias locales)
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: visag
+          POSTGRES_PASSWORD: visag_ci
+          POSTGRES_DB: visagqa_tienda
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U visag"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      BASE_DE_PRUEBA: postgres://visag:visag_ci@localhost:5432/visagqa_tienda
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: mkdir -p reportes/servidores
+      - uses: ./.github/actions/copias-locales
+      - run: npm ci
+      - run: npm run api:local
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-api-local
+          path: reportes/
+          retention-days: 14
+
+  en-linea:
+    name: En línea · UniGest, VisagStock invitado y VisagAssist
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ci-etapa-4'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - id: navegador
+        run: npx playwright test --project=en-linea
+      - if: success() || steps.navegador.conclusion == 'failure'
+        run: npm run api:en-linea
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reporte-en-linea
+          path: reportes/
+          retention-days: 14

@@ -1,0 +1,66 @@
+name: Copias locales de VisagShop y VisagStock
+description: Descarga la tienda y el inventario, los instala y los deja corriendo sobre el PostgreSQL de la tarea.
+
+runs:
+  using: composite
+  steps:
+    - name: Descargar VisagShop
+      uses: actions/checkout@v4
+      with:
+        repository: stiven-triana-dev/VisagShop
+        path: tienda-app
+
+    - name: Descargar VisagStock
+      uses: actions/checkout@v4
+      with:
+        repository: stiven-triana-dev/VisagStock
+        path: inventario-app
+
+    - name: Instalar VisagShop
+      shell: bash
+      working-directory: tienda-app
+      run: npm ci --omit=dev
+
+    - name: Instalar y compilar VisagStock
+      shell: bash
+      working-directory: inventario-app
+      run: |
+        npm ci
+        npm run build
+
+    - name: Arrancar la tienda
+      shell: bash
+      working-directory: tienda-app
+      env:
+        DATABASE_URL: ${{ env.BASE_DE_PRUEBA }}
+        ADMIN_USERNAME: admin_qa
+        ADMIN_PASSWORD: clave-admin-qa-2026
+        WHATSAPP_NUMBER: '573000000000'
+        PORT: '3210'
+      run: |
+        nohup node app.js > "$GITHUB_WORKSPACE/reportes/servidores/tienda.log" 2>&1 &
+        for i in $(seq 1 60); do
+          curl -fs http://localhost:3210/health > /dev/null && exit 0
+          sleep 2
+        done
+        cat "$GITHUB_WORKSPACE/reportes/servidores/tienda.log"
+        exit 1
+
+    - name: Arrancar el inventario
+      shell: bash
+      working-directory: inventario-app
+      env:
+        DATABASE_URL: ${{ env.BASE_DE_PRUEBA }}
+        ADMIN_USERNAME: admin_qa
+        ADMIN_PASSWORD: clave-stock-qa-2026
+        JWT_SECRETO: secreto-de-pruebas-visagqa-con-mas-de-32-caracteres
+        DEMO_ACTIVO: 'true'
+        PORT: '3220'
+      run: |
+        nohup node api/dist/server.js > "$GITHUB_WORKSPACE/reportes/servidores/inventario.log" 2>&1 &
+        for i in $(seq 1 60); do
+          curl -fs http://localhost:3220/api/estado > /dev/null && exit 0
+          sleep 2
+        done
+        cat "$GITHUB_WORKSPACE/reportes/servidores/inventario.log"
+        exit 1
