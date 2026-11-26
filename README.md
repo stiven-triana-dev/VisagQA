@@ -1,5 +1,7 @@
 # VisagQA
 
+[![Pruebas](https://github.com/stiven-triana-dev/VisagQA/actions/workflows/pruebas.yml/badge.svg)](https://github.com/stiven-triana-dev/VisagQA/actions/workflows/pruebas.yml)
+
 Pruebas automáticas **de punta a punta** para mis proyectos: **VisagShop** (la tienda), **VisagStock**
 (su inventario), **UniGest** (sistema académico) y **VisagAssist** (asistente con IA).
 
@@ -17,7 +19,7 @@ lo que hace este repositorio, como lo haría un analista QA.
 | 1 | VisagShop: catálogo, carrito, pedido, cuentas y panel | ✅ 27 pruebas |
 | 2 | VisagStock (administrador e invitado) y UniGest (tres roles) | ✅ 18 pruebas |
 | 3 | APIs de las cuatro aplicaciones con Postman y Newman | ✅ 97 peticiones, 117 comprobaciones |
-| 4 | GitHub Actions, prueba diaria en línea y reportes | Próximamente |
+| 4 | GitHub Actions, prueba diaria en línea y reportes | ✅ En cada cambio y de lunes a viernes |
 
 **45 pruebas de navegador y 117 comprobaciones de API. Encontraron 6 errores reales, y ya están corregidos
 en cada proyecto.**
@@ -99,6 +101,27 @@ demasiado largo).
 Primero dejé cada prueba **fallando a propósito** (una prueba de QA que falla por un error real está
 haciendo su trabajo), después corregí el proyecto y ahora pasan. Si un error vuelve, la prueba lo detecta.
 
+## Automatización con GitHub Actions
+
+Las pruebas corren solas en GitHub, sin abrir mi computador. Están en
+[`.github/workflows/pruebas.yml`](.github/workflows/pruebas.yml).
+
+| Trabajo | Cuándo corre | Qué hace |
+| --- | --- | --- |
+| **Navegador · tienda e inventario** | En cada cambio que subo y a mano | Descarga VisagShop y VisagStock, los arranca sobre un PostgreSQL temporal y corre las 35 pruebas de `tienda` e `inventario`. |
+| **API · copias locales** | En cada cambio que subo y a mano | Lo mismo, con su propia base, y corre las colecciones de VisagShop y VisagStock administrador. |
+| **En línea** | **De lunes a viernes a las 7:00 a. m.** (hora de Colombia) y a mano | Corre las 10 pruebas de `en-linea` y las APIs de UniGest, VisagStock invitado y VisagAssist contra lo publicado. Si una aplicación se cae, el sello de arriba se pone rojo. |
+
+- **Ninguna clave real:** las copias usan las mismas claves de prueba de siempre y una base que se borra al
+  terminar. Lo publicado solo se lee.
+- **Reportes:** cada corrida guarda el reporte de Playwright (capturas, videos y trazas), los reportes de
+  Newman y los registros de los servidores. Se descargan en la pestaña **Actions**, al final de cada
+  corrida, durante 14 días.
+- **Arrancar las copias** es una acción propia,
+  [`.github/actions/copias-locales`](.github/actions/copias-locales/action.yml), que usan los dos trabajos
+  locales: primero la tienda (crea las tablas y carga los 108 productos) y después el inventario, que se
+  apoya en esas tablas.
+
 ## Cómo correrlo
 
 Necesitas **Node.js 22.12 o superior** y, para los grupos `tienda` e `inventario`, PostgreSQL con copias
@@ -141,6 +164,7 @@ npm run typecheck         # revisa los tipos de TypeScript
 | **PostgreSQL de prueba** | Las bases de las copias | Es el mismo motor que usan las aplicaciones en producción (Neon). |
 | **Postman** | Escribir las colecciones de API con sus comprobaciones en JavaScript (`pm.test`) | Es la herramienta que más piden las ofertas de QA, y las colecciones se pueden abrir y correr a mano en la aplicación. |
 | **Newman** | Ejecutar las colecciones desde la terminal (`scripts/api.mjs`) | Corre lo mismo que Postman sin abrir la aplicación, así se puede automatizar. |
+| **GitHub Actions** | Correr todo en cada cambio y de lunes a viernes | Es gratis en repositorios públicos, trae PostgreSQL como servicio y guarda los reportes de cada corrida. |
 | **newman-reporter-htmlextra** y JUnit | Reportes de las APIs en `reportes/api/` | El HTML muestra cada petición con su respuesta; el XML JUnit lo entienden herramientas como GitHub Actions. |
 
 ## Lo que aprendí
@@ -175,6 +199,10 @@ npm run typecheck         # revisa los tipos de TypeScript
     llegar a la IA, y lo verifiqué en el código.
 11. **Probar los cambios grandes antes de publicarlos.** El arreglo de la versión tocaba Java; lo subí a una
     rama temporal, esperé las 101 pruebas en GitHub, lo fusioné y borré la rama.
+12. **Las pruebas sirven más cuando corren solas.** Con GitHub Actions cada cambio se prueba contra copias
+    nuevas de la tienda y del inventario, y cada mañana de lunes a viernes se revisa lo publicado. Separé
+    los trabajos para que cada uno arranque con su propia base y sus propios límites: si las pruebas de
+    navegador y las de API compartieran la tienda, gastarían juntas los 10 pedidos por hora.
 
 ## Problemas que tuve y cómo los resolví
 
@@ -193,6 +221,7 @@ npm run typecheck         # revisa los tipos de TypeScript
 | En Postman, el ID de la talla llegaba como texto (`"5"`) y el servidor lo rechazaba. | Una variable `{{talla_id}}` dentro del JSON tiene que ir entre comillas para que el JSON sea válido, y entonces se envía como texto. | Un script previo a la petición reemplaza la variable por su número antes de enviarla. |
 | UniGest respondía **400** al pedir el boletín como administrador. | El reporte exige el período (`periodoId`). Era un error de mi prueba, no de UniGest. | La colección consulta primero los períodos y usa el más reciente que ya empezó. |
 | A mitad de las pruebas la sesión de UniGest se perdió con **401**. | Render estaba reiniciando UniGest para publicar la corrección de la versión. | Esperar a que el estado responda la versión nueva antes de volver a correr las pruebas. |
+| No podía probar el trabajo **En línea** en la rama temporal. | Ese trabajo solo corre con el horario o a mano, y el botón para correrlo a mano solo aparece cuando el archivo ya está en `main`. | Mientras probaba, lo activé también para la rama temporal; cuando pasó en verde lo quité y fusioné. |
 | TypeScript pedía la extensión `.js` en cada `import`. | Con `moduleResolution: nodenext` los `import` relativos deben llevarla. | Usar `moduleResolution: bundler`, que es como Playwright carga los archivos. |
 
 ## Seguridad de las dependencias

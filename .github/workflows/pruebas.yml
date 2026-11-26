@@ -2,7 +2,7 @@ name: Pruebas
 
 on:
   push:
-    branches: [main, ci-etapa-4]
+    branches: [main]
   pull_request:
   schedule:
     - cron: '0 12 * * 1-5'
@@ -91,7 +91,7 @@ jobs:
 
   en-linea:
     name: En línea · UniGest, VisagStock invitado y VisagAssist
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/ci-etapa-4'
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
